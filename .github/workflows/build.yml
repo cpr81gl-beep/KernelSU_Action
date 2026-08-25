@@ -40,7 +40,6 @@ jobs:
           cd uke-kernel
           
           echo "1. Cài đặt KernelSU Gốc (Khóa bản Vàng v1.1.4)..."
-          # Sử dụng URL chính thức của KSU Gốc, an toàn tuyệt đối không lỗi 404
           curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" > setup.sh
           chmod +x setup.sh
           ./setup.sh v1.1.4
@@ -71,7 +70,10 @@ jobs:
           sed -i '/hwid/d' drivers/misc/Makefile
           sed -i 's/u64 clidr;/u64 clidr = 0;/g' arch/arm64/kvm/sys_regs.c
           
-          echo "2. Thiết lập trình biên dịch..."
+          echo "2. FIX LỖI TỬ HUYỆT VMA_PAD_START (Phẫu thuật code C)..."
+          sed -i 's/VMA_PAD_START(vma)/vma->vm_end/g' fs/proc/task_mmu.c
+          
+          echo "3. Thiết lập trình biên dịch..."
           export KCFLAGS="-Wno-error"
           export PATH=$GITHUB_WORKSPACE/clang/bin:$PATH
           export ARCH=arm64
@@ -88,13 +90,13 @@ jobs:
           export LLVM=1
           export LLVM_IAS=1
           
-          echo "3. Biên dịch gki_defconfig..."
+          echo "4. Biên dịch gki_defconfig..."
           make O=out gki_defconfig
           
-          echo "4. Tắt BTF Debug..."
+          echo "5. Tắt BTF Debug..."
           scripts/config --file out/.config --disable CONFIG_DEBUG_INFO_BTF
           
-          echo "5. Compile (Sẽ mất 10-15 phút)..."
+          echo "6. Compile..."
           make -j$(nproc) O=out
 
       - name: Pack AnyKernel3
