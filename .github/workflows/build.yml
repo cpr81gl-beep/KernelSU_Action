@@ -11,19 +11,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Environment & Download Source
+      - name: Setup Environment
         run: |
           sudo apt-get update
           sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev python3
+
+      - name: Download Clang Toolchain
+        run: |
+          echo "Tải bộ biên dịch Proton-Clang siêu tốc..."
+          git clone https://github.com/kdrag0n/proton-clang.git --depth=1 clang
+
+      - name: Download Kernel Source & KernelSU
+        run: |
+          echo "Tải mã nguồn Kernel..."
+          # [LƯU Ý NHỎ DÀNH CHO BẠN]: Mình đang để tạm link tải mã nguồn gốc của Xiaomi (uke). 
+          # NẾU bạn đang dùng một đường link git clone khác của riêng bạn, hãy thay link vào dòng dưới đây nhé:
+          git clone https://github.com/MiCode/Xiaomi_Kernel_OpenSource.git -b uke-u-oss --depth=1 uke-kernel
           
-          # ===================================================================
-          # [QUAN TRỌNG] BẠN HÃY DÁN LỆNH TẢI CLANG VÀ KERNEL CỦA BẠN VÀO ĐÂY:
-          # (Ví dụ: git clone https://github.com/.../uke-kernel.git uke-kernel)
-          # (Ví dụ: git clone https://.../clang.git clang)
-          
-          
-          
-          # ===================================================================
+          echo "Chèn KernelSU vào Source..."
+          cd uke-kernel
+          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
 
       - name: Build Kernel Image
         run: |
@@ -37,7 +44,7 @@ jobs:
           echo "2. FIX LỖI TỬ HUYỆT VMA_PAD_START (Phẫu thuật code C)..."
           sed -i 's/VMA_PAD_START(vma)/vma->vm_end/g' fs/proc/task_mmu.c
           
-          echo "2.1 FIX LỖI KSU ẨN (Ép giá trị 0 để vượt rào)..."
+          echo "2.1 FIX LỖI KSU ẨN (Ép giá trị 0 để vượt rào biên dịch)..."
           sed -i 's/ksu_late_loaded/0/g' drivers/kernelsu/feature/selinux_hide.c
           
           echo "3. Thiết lập trình biên dịch..."
@@ -53,13 +60,13 @@ jobs:
           export OBJDUMP="llvm-objdump"
           export STRIP="llvm-strip"
           
-          echo "4. Biên dịch gki_defconfig..."
+          echo "4. Biên dịch GKI Defconfig..."
           make O=out gki_defconfig
           
           echo "5. Tắt BTF Debug..."
           scripts/config --file out/.config --disable CONFIG_DEBUG_INFO_BTF
           
-          echo "6. Compile..."
+          echo "6. Bắt đầu Compile (Quá trình này mất khoảng 15-20 phút)..."
           make -j$(nproc) O=out
 
       - name: Pack AnyKernel3
@@ -73,10 +80,10 @@ jobs:
           sed -i 's|block=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;|block=boot;|g' anykernel.sh
           sed -i 's/is_slot_device=0;/is_slot_device=auto;/g' anykernel.sh
           
-          zip -r9 ../AnyKernel3-Pad7-KSU114.zip * -x .git\* README.md *placeholder
+          zip -r9 ../AnyKernel3-Pad7-KSU.zip * -x .git\* README.md *placeholder
 
       - name: Upload Kernel Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AnyKernel3-Pad7-KSU114
-          path: AnyKernel3-Pad7-KSU114.zip
+          name: AnyKernel3-Pad7-KSU
+          path: AnyKernel3-Pad7-KSU.zip
