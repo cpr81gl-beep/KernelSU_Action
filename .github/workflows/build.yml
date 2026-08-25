@@ -73,7 +73,7 @@ jobs:
           echo "2. FIX LỖI TỬ HUYỆT VMA_PAD_START (Phẫu thuật code C)..."
           sed -i 's/VMA_PAD_START(vma)/vma->vm_end/g' fs/proc/task_mmu.c
           echo "2.1 FIX LỖI KSU ẨN (Lỗi phát sinh)..."
-          sed -i '1s/^/extern bool ksu_late_loaded;\n/' drivers/kernelsu/feature/selinux_hide.c
+          sed -i 's/ksu_late_loaded/0/g' drivers/kernelsu/feature/selinux_hide.c
           
           echo "3. Thiết lập trình biên dịch..."
           export KCFLAGS="-Wno-error"
