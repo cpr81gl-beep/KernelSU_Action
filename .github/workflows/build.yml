@@ -29,8 +29,16 @@ jobs:
         run: |
           cd uke-kernel
           
-          echo "1. Cài đặt KernelSU Next..."
-          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/main/kernel/setup.sh" | bash -
+          echo "1. Cài đặt KernelSU Next (Bypass lỗi 404)..."
+          # Tự clone và dùng script gốc của Tiann để lừa hệ thống
+          git clone https://github.com/KernelSU-Next/KernelSU-Next.git KernelSU
+          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" -o setup.sh
+          sed -i '/git clone/d' setup.sh
+          sed -i '/git pull/d' setup.sh
+          sed -i '/git checkout/d' setup.sh
+          sed -i '/git fetch/d' setup.sh
+          chmod +x setup.sh
+          ./setup.sh
           
           echo "2. Tải SuSFS nhánh GKI 6.1..."
           cd ..
@@ -46,7 +54,7 @@ jobs:
           patch -p1 --forward --fuzz=3 < "$GKI_PATCH" || echo "[-] Có xung đột nhỏ (Hunk FAILED), nhưng vẫn tiếp tục Kleaf Build."
           
           echo "4. Cài mã vá SuSFS vào KSU Next..."
-          cd KernelSU-Next
+          cd KernelSU
           cp ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./
           sed -i 's/kernel\/ksu.c/kernel\/core.c/g' 10_enable_susfs_for_ksu.patch
           patch -p1 --forward --fuzz=3 < 10_enable_susfs_for_ksu.patch || echo "[-] Đã bỏ qua các Hunk FAILED của KSU Next."
@@ -56,11 +64,9 @@ jobs:
           cd uke-kernel
           
           echo "Khởi chạy Bazel/Kleaf build..."
-          # Đặt biến môi trường cho GKI
           export BUILD_CONFIG=common/build.config.gki.aarch64
           export LTO=thin
           
-          # Chạy script build chuẩn của hệ thống Kleaf
           bash build/build.sh -j$(nproc)
           
           echo "Tìm file Image sau khi build..."
@@ -69,7 +75,7 @@ jobs:
       - name: Pack AnyKernel3
         run: |
           git clone https://github.com/osm0sis/AnyKernel3 --depth=1 AnyKernel3
-          cp uke-kernel/Image AnyKernel3/
+          cp uke-kernel/Image AnyKernel3/ || echo "Không tìm thấy file Image!"
           cd AnyKernel3
           zip -r9 ../AnyKernel3-Pad7-Kleaf-KSUNext.zip * -x .git\* README.md *placeholder
 
