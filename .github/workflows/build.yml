@@ -29,14 +29,16 @@ jobs:
         run: |
           cd uke-kernel
           
-          echo "1. Cài đặt KernelSU Next (Bypass lỗi 404)..."
-          # Tự clone và dùng script gốc của Tiann để lừa hệ thống
+          echo "1. Cài đặt KernelSU Next (Bypass lỗi 404 siêu chuẩn)..."
           git clone https://github.com/KernelSU-Next/KernelSU-Next.git KernelSU
           curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" -o setup.sh
-          sed -i '/git clone/d' setup.sh
-          sed -i '/git pull/d' setup.sh
-          sed -i '/git checkout/d' setup.sh
-          sed -i '/git fetch/d' setup.sh
+          
+          # Thay lệnh git bằng lệnh echo để CHỐNG LỖI CÚ PHÁP "fi"
+          sed -i 's/git clone/echo clone/g' setup.sh
+          sed -i 's/git pull/echo pull/g' setup.sh
+          sed -i 's/git checkout/echo checkout/g' setup.sh
+          sed -i 's/git fetch/echo fetch/g' setup.sh
+          
           chmod +x setup.sh
           ./setup.sh
           
@@ -51,13 +53,13 @@ jobs:
           cd uke-kernel
           GKI_PATCH=$(find ../susfs4ksu -type f -name "*.patch" | grep -i "gki" | grep -v "KernelSU" | head -n 1)
           echo "Áp dụng patch GKI: $GKI_PATCH"
-          patch -p1 --forward --fuzz=3 < "$GKI_PATCH" || echo "[-] Có xung đột nhỏ (Hunk FAILED), nhưng vẫn tiếp tục Kleaf Build."
+          patch -p1 --forward --fuzz=3 < "$GKI_PATCH" || echo "[-] Bỏ qua xung đột GKI."
           
           echo "4. Cài mã vá SuSFS vào KSU Next..."
           cd KernelSU
           cp ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./
           sed -i 's/kernel\/ksu.c/kernel\/core.c/g' 10_enable_susfs_for_ksu.patch
-          patch -p1 --forward --fuzz=3 < 10_enable_susfs_for_ksu.patch || echo "[-] Đã bỏ qua các Hunk FAILED của KSU Next."
+          patch -p1 --forward --fuzz=3 < 10_enable_susfs_for_ksu.patch || echo "[-] Bỏ qua xung đột KSU Next."
 
       - name: Build Kernel with Kleaf/Bazel
         run: |
